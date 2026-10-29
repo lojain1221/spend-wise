@@ -18,16 +18,4 @@ SpendWise is a web application for tracking income and expenses, setting monthly
 - Calculate spending against a budget
 - Real-time warning and over-budget notifications
 
-## Not included
-Bank integrations, currency conversion, payment processing, shared household accounts, advanced analytics, and mobile apps.
 
-## System components and communication
-| Requirement | Design |
-| --- | --- |
-| At least four microservices | User, Transaction, Budget, Notification |
-| At least one client | Browser-based web client |
-| API Gateway | Routes REST requests and proxies WebSocket connections |
-| Synchronous communication | REST between client/gateway/services and one internal service lookup |
-| Asynchronous communication | RabbitMQ events between services |
-| Real-time updates | Notification Service sends WebSocket alerts to browser via Gateway |
-| Diagrams | Mermaid architecture and sequence diagrams |

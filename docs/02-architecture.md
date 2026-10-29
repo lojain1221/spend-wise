@@ -1,15 +1,15 @@
 # 02 — Architecture
 
 ## Service responsibilities
-| Component | Responsibility | Owns data? |
-| --- | --- | --- |
-| Web Client | User interface, HTTP calls, WebSocket connection | No |
-| API Gateway | Single public entry point; REST routing, WebSocket proxy | No |
-| User Service | User profiles and authentication | Yes |
-| Transaction Service | Income/expense records and categories | Yes |
-| Budget Service | Monthly budget limits and spending totals | Yes |
-| Notification Service | Warning records and live alert delivery | Yes |
-| RabbitMQ | Delivers asynchronous events | Broker infrastructure |
+| Component | Responsibility |
+| --- | --- |
+| Web Client | User interface, HTTP calls, WebSocket connection |
+| API Gateway | Single public entry point; REST routing, WebSocket proxy |
+| User Service | User profiles and authentication |
+| Transaction Service | Income/expense records and categories |
+| Budget Service | Monthly budget limits and spending totals |
+| Notification Service | Warning records and live alert delivery | 
+| RabbitMQ | Delivers asynchronous events |
 
 Each microservice owns its data. The API Gateway routes requests and is separate from the four business services.
 

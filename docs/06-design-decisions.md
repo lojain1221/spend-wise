@@ -1,39 +1,57 @@
-# 06 — Design decisions
+# 06 — Design Decisions
 
-## Why this project?
-An expense updates a budget and may trigger an alert. This creates a clear workflow across independent services without bank integrations or payment processing.
+## Project Choice
 
-## Why four services?
-- **User:** identity and profiles
-- **Transaction:** the source of truth for income and expense entries
-- **Budget:** limits and calculated spending
-- **Notification:** alert storage and live delivery
+SpendWise was chosen because managing personal expenses involves several connected functions, including transactions, budgets, and notifications.
 
-Each service has a distinct responsibility and its own database.
+These functions provide a practical example of how microservices can work together in one application.
 
-## Why FastAPI and JavaScript?
-Python/FastAPI can support REST and WebSockets with a relatively simple codebase. A plain HTML/CSS/JavaScript browser client keeps the UI lightweight. 
+## Microservice Architecture
 
-## Why REST plus RabbitMQ?
-REST provides clear request/response interactions. RabbitMQ allows budget calculations and notifications to happen after a transaction is saved, without blocking the user-facing request.
+The application is divided into four microservices to separate different responsibilities.
 
-## Why WebSockets?
-A persistent browser connection allows an alert to appear without reloading. This is more meaningful here than repeatedly polling for notifications.
+This structure allows each service to be developed and tested independently.
 
-## Why an API Gateway?
-It provides one browser-facing entry point and routes HTTP and WebSocket traffic. It is infrastructure, not a fifth business microservice.
+An API Gateway is used to provide a single entry point for the web client.
 
-## Known trade-offs
-- Event-driven totals are eventually consistent.
-- A message broker adds setup complexity.
-- Authentication across services requires careful handling.
-- SQLite is easy for development but would not be the choice for a scaled deployment.
-- Reliable event publication and idempotent consumption require extra implementation work.
+## Technology Choices
 
-## Development steps
-1. Implement User and Transaction services with REST endpoints.
-2. Add Budget and Notification services and independent databases.
-3. Connect RabbitMQ events and event consumers.
-4. Add Gateway routing, WebSocket proxy, and browser client.
-5. Test transaction → budget → alert end to end.
+### Backend — FastAPI
 
+FastAPI was selected because it supports REST APIs and WebSocket communication using Python.
+
+It is also relatively simple to use for developing small web services.
+
+### Frontend — HTML, CSS, and JavaScript
+
+These technologies were selected to build a browser-based interface without requiring a frontend framework.
+
+### Database — SQLite
+
+SQLite was chosen because it is lightweight and easy to configure for development.
+
+Each microservice uses its own database to keep its data independent from other services.
+
+## Communication Decisions
+
+### REST
+
+REST is used for operations that require an immediate response, such as creating a transaction or retrieving user information.
+
+### RabbitMQ
+
+RabbitMQ allows services to exchange events without waiting for other services to complete their processing.
+
+This means budget calculations can happen after a transaction has been saved.
+
+### WebSocket
+
+WebSocket was selected to display budget notifications immediately without requiring users to refresh the page.
+
+## Design Trade-offs
+
+- Using separate microservices requires more configuration than a single application.
+- RabbitMQ adds an additional component that needs to be managed.
+- Budget totals may not update immediately because events are processed asynchronously.
+- Separate databases prevent services from directly accessing each other's data.
+- SQLite is suitable for this project's development needs but has limitations for applications with many concurrent users.

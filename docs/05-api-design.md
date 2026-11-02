@@ -2,9 +2,7 @@
 
 ## API Overview
 
-SpendWise uses an API Gateway to handle requests from the web client and forward them to the appropriate microservice.
-
-Each microservice manages its own functionality. REST APIs are used for synchronous communication, RabbitMQ is used for asynchronous events, and WebSocket is used for real-time notifications.
+The web client accesses SpendWise services through the API Gateway.
 
 ## API Endpoints
 
@@ -24,37 +22,16 @@ Each microservice manages its own functionality. REST APIs are used for synchron
 | GET | `/notifications` | Notification Service | View notifications |
 | PATCH | `/notifications/{id}/read` | Notification Service | Mark a notification as read |
 
-## WebSocket Communication
-
-SpendWise uses WebSocket to send budget notifications to users in real time.
-
-The web client connects through the API Gateway, which forwards the WebSocket connection to the Notification Service.
+## WebSocket Endpoint
 
 | Protocol | Endpoint | Service | Purpose |
 | --- | --- | --- | --- |
-| WebSocket | `/ws/notifications` | Notification Service | Send real-time budget alerts |
-
-When a budget threshold is reached, the Notification Service sends an alert to the connected user.
-
-## Internal Service Communication
-
-The microservices communicate using REST and RabbitMQ.
-
-### REST Communication
-
-The Transaction Service communicates with the User Service to verify that a user account exists.
-
-### RabbitMQ Communication
-
-- The Transaction Service publishes events when transactions are created, updated, or deleted.
-- The Budget Service receives transaction events and updates spending totals.
-- When a budget threshold is reached, the Budget Service publishes an event.
-- The Notification Service receives the event and creates a notification.
+| WebSocket | `/ws/notifications` | Notification Service | Deliver real-time budget alerts |
 
 ## Authentication and Security
 
-- User passwords are stored as hashes.
-- The User Service handles registration and login.
-- Access tokens are used to authenticate requests.
+- Registration and login are handled by the User Service.
+- Passwords are stored as hashes.
+- Access tokens are required for protected endpoints.
 - Users can access only their own transactions, budgets, and notifications.
-- WebSocket connections require authentication before notifications are delivered.
+- WebSocket connections require authentication.

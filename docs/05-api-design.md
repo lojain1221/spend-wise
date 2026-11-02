@@ -1,252 +1,57 @@
-# 05 — API Design
+05 — API Design
 
-## API Overview
+API Overview
 
-SpendWise uses REST APIs for communication between the web client and microservices.
+SpendWise uses an API Gateway to handle requests from the web client and forward them to the appropriate microservice.
 
-The web client sends requests through the API Gateway, which forwards them to the appropriate service.
+Each microservice manages its own functionality. The services communicate using REST APIs and RabbitMQ, while WebSocket is used for real-time notifications.
 
-The application also uses WebSocket to send real-time budget notifications.
+API Endpoints
 
-## API Endpoints
+Method	Path	Service	Purpose
+POST	/auth/register	User Service	Create a new account
+POST	/auth/login	User Service	Log in to an account
+GET	/users/me	User Service	Get user profile
+GET	/transactions	Transaction Service	View transactions
+POST	/transactions	Transaction Service	Add income or expense
+DELETE	/transactions/{id}	Transaction Service	Delete a transaction
+GET	/categories	Transaction Service	View categories
+POST	/categories	Transaction Service	Create a category
+GET	/budgets	Budget Service	View monthly budgets
+POST	/budgets	Budget Service	Create a monthly budget
+GET	/notifications	Notification Service	View notifications
+PATCH	/notifications/{id}/read	Notification Service	Mark a notification as read
 
-### User Service
+WebSocket Communication
 
-The User Service handles account registration, login, and user information.
+SpendWise uses WebSocket to send budget notifications to users in real time.
 
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/auth/register` | Register a new user |
-| POST | `/auth/login` | Log in and receive an access token |
-| GET | `/users/me` | Get the current user's profile |
+The web client connects through the API Gateway, which forwards the WebSocket connection to the Notification Service.
 
-### Transaction Service
+Protocol	Endpoint	Service	Purpose
+WebSocket	/ws/notifications	Notification Service	Send real-time budget alerts
 
-The Transaction Service manages income, expenses, and categories.
+When a budget threshold is reached, the Notification Service sends an alert to the connected user.
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/transactions` | Get the user's transactions |
-| POST | `/transactions` | Add a new income or expense |
-| PUT | `/transactions/{id}` | Update an existing transaction |
-| DELETE | `/transactions/{id}` | Delete a transaction |
-| GET | `/categories` | Get the user's categories |
-| POST | `/categories` | Create a category |
-| DELETE | `/categories/{id}` | Delete a category |
+Internal Service Communication
 
-### Budget Service
+The microservices communicate using REST and RabbitMQ.
 
-The Budget Service manages monthly budgets and spending totals.
+REST Communication
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/budgets` | Get the user's monthly budgets |
-| POST | `/budgets` | Create a monthly budget |
-| PUT | `/budgets/{id}` | Update a budget limit |
-| DELETE | `/budgets/{id}` | Delete a budget |
+The Transaction Service communicates with the User Service to verify that a user account exists.
 
-### Notification Service
+RabbitMQ Communication
 
-The Notification Service stores notifications and sends real-time alerts.
+* The Transaction Service publishes events when transactions are created, updated, or deleted.
+* The Budget Service receives transaction events and updates spending totals.
+* When a budget threshold is reached, the Budget Service publishes an event.
+* The Notification Service receives the event and creates a notification.
 
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/notifications` | Get the user's notifications |
-| PATCH | `/notifications/{id}/read` | Mark a notification as read |
-| WS | `/ws/notifications` | Receive real-time notifications |
+Authentication and Security
 
-## Example API Requests
-
-### 1. Register a User
-
-**Endpoint:** `POST /auth/register`
-
-Request:
-
-```json
-{
-  "email": "student@example.com",
-  "password": "examplePassword123",
-  "display_name": "Student"
-}
-```
-
-Response:
-
-```json
-{
-  "id": "user-uuid",
-  "email": "student@example.com",
-  "display_name": "Student"
-}
-```
-
-### 2. User Login
-
-**Endpoint:** `POST /auth/login`
-
-Request:
-
-```json
-{
-  "email": "student@example.com",
-  "password": "examplePassword123"
-}
-```
-
-Response:
-
-```json
-{
-  "access_token": "example-jwt-token",
-  "token_type": "bearer"
-}
-```
-
-The access token is used to authenticate requests to protected endpoints.
-
-### 3. Add an Expense
-
-**Endpoint:** `POST /transactions`
-
-Request:
-
-```json
-{
-  "category_id": "category-uuid",
-  "type": "expense",
-  "amount_cents": 3000,
-  "occurred_at": "2026-11-02T12:00:00Z",
-  "note": "Groceries"
-}
-```
-
-Response:
-
-```json
-{
-  "id": "transaction-uuid",
-  "category_id": "category-uuid",
-  "type": "expense",
-  "amount_cents": 3000,
-  "occurred_at": "2026-11-02T12:00:00Z",
-  "note": "Groceries"
-}
-```
-
-After saving the transaction, the Transaction Service publishes a `TransactionCreated` event to RabbitMQ.
-
-The Budget Service receives the event and updates the spending total.
-
-### 4. Create a Budget
-
-**Endpoint:** `POST /budgets`
-
-Request:
-
-```json
-{
-  "category_id": "category-uuid",
-  "month": "2026-11",
-  "limit_cents": 30000
-}
-```
-
-Response:
-
-```json
-{
-  "id": "budget-uuid",
-  "category_id": "category-uuid",
-  "month": "2026-11",
-  "limit_cents": 30000,
-  "spent_cents": 0
-}
-```
-
-The Budget Service stores the monthly spending limit.
-
-When transactions are added, updated, or deleted, the spending total is adjusted using events received from RabbitMQ.
-
-### 5. Get Notifications
-
-**Endpoint:** `GET /notifications`
-
-Response:
-
-```json
-[
-  {
-    "id": "notification-uuid",
-    "budget_id": "budget-uuid",
-    "kind": "budget_warning",
-    "message": "You have reached 80% of your grocery budget.",
-    "created_at": "2026-11-02T12:05:00Z",
-    "read_at": null
-  }
-]
-```
-
-Users can retrieve previous notifications even if they were not connected when the alert was generated.
-
-## WebSocket Communication
-
-**Endpoint:** `/ws/notifications`
-
-The web client connects to the Notification Service through the API Gateway.
-
-When a budget threshold is reached:
-
-1. The Budget Service publishes a `BudgetThresholdReached` event.
-2. RabbitMQ delivers the event to the Notification Service.
-3. The Notification Service saves the notification.
-4. The notification is sent through WebSocket.
-5. The web client displays the alert.
-
-Example WebSocket message:
-
-```json
-{
-  "type": "budget_warning",
-  "budget_id": "budget-uuid",
-  "message": "You have reached 80% of your grocery budget."
-}
-```
-
-## HTTP Status Codes
-
-| Status Code | Meaning |
-|---|---|
-| 200 OK | Request completed successfully |
-| 201 Created | New record created |
-| 204 No Content | Record deleted successfully |
-| 400 Bad Request | Invalid request data |
-| 401 Unauthorized | Missing or invalid authentication |
-| 403 Forbidden | User does not have permission |
-| 404 Not Found | Requested record does not exist |
-| 409 Conflict | Record conflicts with existing data |
-| 500 Internal Server Error | Unexpected server error |
-
-## Security
-
-- Passwords are stored as secure password hashes.
-- The User Service handles authentication and issues signed access tokens.
-- Protected REST endpoints require a valid access token.
-- Each service checks that users can access only their own data.
-- User IDs are obtained from the authenticated token rather than the request body.
-- WebSocket connections require authentication before notifications are delivered.
-- Communication between the browser and API Gateway uses HTTPS and secure WebSocket connections in deployment.
-
-## Internal Service Communication
-
-Some communication happens directly between microservices.
-
-| Source | Destination | Method | Purpose |
-|---|---|---|---|
-| Transaction Service | User Service | REST | Check whether a user exists |
-| Transaction Service | RabbitMQ | Event | Publish transaction changes |
-| RabbitMQ | Budget Service | Event | Deliver transaction events |
-| Budget Service | RabbitMQ | Event | Publish budget threshold events |
-| RabbitMQ | Notification Service | Event | Deliver budget alerts |
-
-The services do not access each other's databases directly.
+* User passwords are stored as hashes.
+* The User Service handles registration and login.
+* Access tokens are used to authenticate requests.
+* Users can access only their own transactions, budgets, and notifications.
+* WebSocket connections require authentication before notifications are delivered.
